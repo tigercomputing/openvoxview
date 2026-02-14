@@ -52,6 +52,8 @@ func main() {
 		r.SetTrustedProxies(cfg.TrustedProxies)
 	}
 
+	caEnabled := cfg.PuppetCA.Host != ""
+
 	pdbHandler := handler.NewPdbHandler(cfg)
 	viewHandler := handler.NewViewHandler(cfg)
 
@@ -59,10 +61,12 @@ func main() {
 	{
 		api.GET("meta", func(c *gin.Context) {
 			type metaResponse struct {
+				CaEnabled       bool
 				UnreportedHours uint64
 			}
 
 			response := metaResponse{
+				CaEnabled:       caEnabled,
 				UnreportedHours: cfg.UnreportedHours,
 			}
 
@@ -96,6 +100,12 @@ func main() {
 			pdb.GET("fact-names", pdbHandler.PdbGetFactNames)
 			pdb.POST("event-counts", pdbHandler.PdbGetEventCounts)
 		}
+	}
+
+	if caEnabled {
+		caHandler := handler.NewCaHandler(cfg)
+		ca := api.Group("ca")
+		caHandler.RegisterRoutes(ca)
 	}
 
 	r.Run(fmt.Sprintf("%s:%d", cfg.Listen, cfg.Port))
