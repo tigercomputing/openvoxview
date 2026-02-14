@@ -38,6 +38,17 @@ func (h *CaHandler) QueryCertificateStatuses(c *gin.Context) {
 		return
 	}
 
+	if query.States != nil {
+		states := model.UniqueCertificateStates(*query.States)
+
+		if len(states) == len(model.CertificateStateValue) {
+			// all states are requested, so we can ignore the filter and just get all certs
+			query.States = nil
+		} else {
+			query.States = &states
+		}
+	}
+
 	caClient := puppetca.NewClient(h.config)
 	resultCerts := make([]model.CertificateStatus, 0)
 

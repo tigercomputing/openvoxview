@@ -56,6 +56,20 @@ func (s *CertificateState) UnmarshalJSON(data []byte) (err error) {
 	return nil
 }
 
+func UniqueCertificateStates(states []CertificateState) []CertificateState {
+	seen := make(map[CertificateState]struct{})
+	result := make([]CertificateState, 0, len(states))
+
+	for _, s := range states {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			result = append(result, s)
+		}
+	}
+
+	return result
+}
+
 type PuppetCaTime struct {
 	time.Time
 }
