@@ -8,6 +8,7 @@ export interface ErrorResponse {
 
 export interface ApiMeta {
   CaEnabled: boolean
+  CaReadOnly: boolean
   UnreportedHours: number
 }
 

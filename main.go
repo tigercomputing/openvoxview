@@ -62,11 +62,13 @@ func main() {
 		api.GET("meta", func(c *gin.Context) {
 			type metaResponse struct {
 				CaEnabled       bool
+				CaReadOnly      bool
 				UnreportedHours uint64
 			}
 
 			response := metaResponse{
 				CaEnabled:       caEnabled,
+				CaReadOnly:      cfg.PuppetCA.ReadOnly,
 				UnreportedHours: cfg.UnreportedHours,
 			}
 
