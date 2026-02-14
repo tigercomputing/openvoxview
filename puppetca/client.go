@@ -25,17 +25,13 @@ func NewClient(config *config.Config) *client {
 }
 
 func (c *client) call(httpMethod string, endpoint string, payload any, query url.Values, responseData any) (*http.Response, int, error) {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-
-	uri := fmt.Sprintf("%s/%s", cfg.GetPuppetCAAddress(), endpoint)
+	uri := fmt.Sprintf("%s/%s", c.config.GetPuppetCAAddress(), endpoint)
 	if query != nil {
 		uri = fmt.Sprintf("%s?%s", uri, query.Encode())
 	}
 
 	var data []byte
+	var err error
 
 	if payload != nil {
 		data, err = json.Marshal(&payload)
@@ -49,13 +45,13 @@ func (c *client) call(httpMethod string, endpoint string, payload any, query url
 
 	var tlsConfig *tls.Config
 
-	if cfg.PuppetCA.TLS {
+	if c.config.PuppetCA.TLS {
 		tlsConfig = &tls.Config{
-			InsecureSkipVerify: cfg.PuppetCA.TLSIgnore,
+			InsecureSkipVerify: c.config.PuppetCA.TLSIgnore,
 		}
 
-		if cfg.PuppetCA.TLS_CA != "" {
-			caCert, err := os.ReadFile(cfg.PuppetCA.TLS_CA)
+		if c.config.PuppetCA.TLS_CA != "" {
+			caCert, err := os.ReadFile(c.config.PuppetCA.TLS_CA)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -64,8 +60,8 @@ func (c *client) call(httpMethod string, endpoint string, payload any, query url
 			tlsConfig.RootCAs = caCertPool
 		}
 
-		if cfg.PuppetCA.TLS_KEY != "" {
-			cer, err := tls.LoadX509KeyPair(cfg.PuppetCA.TLS_CERT, cfg.PuppetCA.TLS_KEY)
+		if c.config.PuppetCA.TLS_KEY != "" {
+			cer, err := tls.LoadX509KeyPair(c.config.PuppetCA.TLS_CERT, c.config.PuppetCA.TLS_KEY)
 			if err != nil {
 				return nil, 0, err
 			}
