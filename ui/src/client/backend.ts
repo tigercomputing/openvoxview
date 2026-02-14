@@ -79,6 +79,18 @@ class Backend {
       filter: filter,
     } as CertificateStatusQuery);
   }
+
+  signCertificate(name: string): AxiosPromise<BaseResponse<null>> {
+    return api.post(`/api/v1/ca/status/${name}/sign`);
+  }
+
+  revokeCertificate(name: string): AxiosPromise<BaseResponse<null>> {
+    return api.post(`/api/v1/ca/status/${name}/revoke`);
+  }
+
+  cleanCertificate(name: string): AxiosPromise<BaseResponse<null>> {
+    return api.delete(`/api/v1/ca/status/${name}`);
+  }
 }
 
 export default new Backend();

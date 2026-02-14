@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -123,4 +124,117 @@ func (c *client) GetCertificates(state *model.CertificateState) ([]model.Certifi
 	_, _, err := c.call(http.MethodGet, "puppet-ca/v1/certificate_statuses/all", nil, query, &resp)
 
 	return resp, err
+}
+
+func (c *client) GetCertificate(name string) (*model.CertificateStatus, error) {
+	var resp model.CertificateStatus
+
+	_, statusCode, err := c.call(http.MethodGet, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), nil, nil, &resp)
+
+	switch statusCode {
+	case http.StatusOK:
+		return &resp, err
+	default:
+	}
+
+	return nil, err
+}
+
+func (c *client) SignCertificate(name string) error {
+	payload := struct {
+		DesiredState string `json:"desired_state"`
+	}{
+		DesiredState: "signed",
+	}
+
+	_, statusCode, err := c.call(http.MethodPut, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), payload, nil, nil)
+
+	if err != nil {
+		log.Printf("Error signing certificate: %s", err)
+		return err
+	}
+
+	switch statusCode {
+	case http.StatusOK, http.StatusNoContent:
+		return nil
+	default:
+	}
+
+	log.Printf("Unexpected status code while signing certificate: %d", statusCode)
+	return fmt.Errorf("unexpected status code: %d", statusCode)
+}
+
+func (c *client) RevokeCertificate(name string) error {
+	payload := struct {
+		DesiredState string `json:"desired_state"`
+	}{
+		DesiredState: "revoked",
+	}
+
+	_, statusCode, err := c.call(http.MethodPut, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), payload, nil, nil)
+
+	if err != nil {
+		log.Printf("Error revoking certificate: %s", err)
+		return err
+	}
+
+	switch statusCode {
+	case http.StatusOK, http.StatusNoContent:
+		return nil
+	default:
+	}
+
+	log.Printf("Unexpected status code while revoking certificate: %d", statusCode)
+	return fmt.Errorf("unexpected status code: %d", statusCode)
+}
+
+func (c *client) CleanCertificate(name string) error {
+	// Determine the current certificate status to decide which endpoint to use
+	status, err := c.GetCertificate(name)
+
+	if err != nil {
+		log.Printf("Error fetching certificate status: %s", err)
+		return err
+	}
+
+	if status == nil {
+		log.Printf("Certificate %s not found, cannot clean", name)
+		return fmt.Errorf("certificate %s not found", name)
+	}
+
+	var statusCode int
+
+	switch status.State {
+	case model.CertificateSigned:
+		// If the certificate is signed, we can use the clean endpoint to revoke and clean in one step
+		payload := struct {
+			Certnames []string `json:"certnames"`
+		}{
+			Certnames: []string{name},
+		}
+
+		_, statusCode, err = c.call(http.MethodPut, "puppet-ca/v1/clean", payload, nil, nil)
+
+	case model.CertificateRequested, model.CertificateRevoked:
+		// If the certificate is revoked or requested, we must directly delete it
+		_, statusCode, err = c.call(http.MethodDelete, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), nil, nil, nil)
+
+	default:
+		log.Printf("Certificate %s is in state %s, cannot clean", name, status.State)
+		return fmt.Errorf("certificate %s is in state %s, cannot clean", name, status.State)
+	}
+
+	if err != nil {
+		log.Printf("Error cleaning certificate: %s", err)
+		return err
+	}
+
+	switch statusCode {
+	case http.StatusOK, http.StatusNoContent:
+		return nil
+	default:
+	}
+
+	log.Printf("Unexpected status code while cleaning certificate: %d", statusCode)
+	return fmt.Errorf("unexpected status code: %d", statusCode)
 }

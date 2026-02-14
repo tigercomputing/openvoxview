@@ -45,6 +45,7 @@ type Config struct {
 		TLS_CA    string `mapstructure:"tls_ca"`
 		TLS_KEY   string `mapstructure:"tls_key"`
 		TLS_CERT  string `mapstructure:"tls_cert"`
+		ReadOnly  bool   `mapstructure:"readonly"`
 	} `mapstructure:"puppetca"`
 }
 
@@ -74,6 +75,7 @@ func GetConfig() (*Config, error) {
 	viper.SetDefault("puppetca.port", 8140)
 	viper.SetDefault("puppetca.tls", true)
 	viper.SetDefault("puppetca.tls_ignore", false)
+	viper.SetDefault("puppetca.readonly", true)
 
 	viper.AutomaticEnv()
 
@@ -95,6 +97,7 @@ func GetConfig() (*Config, error) {
 	viper.BindEnv("puppetca.tls_ca", "PUPPETCA_TLS_CA")
 	viper.BindEnv("puppetca.tls_key", "PUPPETCA_TLS_KEY")
 	viper.BindEnv("puppetca.tls_cert", "PUPPETCA_TLS_CERT")
+	viper.BindEnv("puppetca.readonly", "PUPPETCA_READONLY")
 
 	viper.ReadInConfig()
 

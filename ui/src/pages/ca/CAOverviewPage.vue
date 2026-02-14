@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { QTableColumn, QTableProps } from 'quasar';
 import { CertificateState, type CertificateStatus, CertificateStatusResponse } from 'src/puppet/models/certificate-status';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Backend from 'src/client/backend';
 import NodeLink from 'components/NodeLink.vue';
+import type { ApiMeta } from 'src/client/models';
 
 const DEBOUNCE = 300;
 
 const { t } = useI18n();
+const meta = ref<ApiMeta>();
 const certificates = ref<CertificateStatus[]>([]);
 const filterExpanded = ref(true);
 const filter = ref('');
@@ -34,7 +36,7 @@ const pagination = ref<NonNullable<QTableProps['pagination']>>({
   rowsPerPage: 20,
 });
 
-const columns: QTableColumn[] = [
+const columnsReadOnly: QTableColumn[] = [
   {
     name: 'name',
     field: 'name',
@@ -74,6 +76,20 @@ const columns: QTableColumn[] = [
   },
 ];
 
+const columnsReadWrite: QTableColumn[] = [
+  ...columnsReadOnly,
+  {
+    name: 'actions',
+    field: 'actions',
+    label: '',
+    align: 'left',
+    sortable: false,
+    classes: 'no-wrap',
+  },
+];
+
+const columns = computed((): QTableColumn[] => { return meta.value?.CaReadOnly ? columnsReadOnly : columnsReadWrite });
+
 function loadCertificates() {
   const states = filterStates.value.length > 0 ? filterStates.value.map(value => {
     if (!Object.values(CertificateState).includes(value as CertificateState)) {
@@ -92,11 +108,44 @@ function loadCertificates() {
   });
 }
 
+function loadMeta() {
+  void Backend.getMeta().then((result) => {
+    if (result.status === 200) {
+      meta.value = result.data.Data;
+    }
+  });
+}
+
+function signCertificate(name: string) {
+  void Backend.signCertificate(name).then((result) => {
+    if (result.status === 200) {
+      setTimeout(() => loadCertificates(), DEBOUNCE);
+    }
+  });
+}
+
+function revokeCertificate(name: string) {
+  void Backend.revokeCertificate(name).then((result) => {
+    if (result.status === 200) {
+      setTimeout(() => loadCertificates(), DEBOUNCE);
+    }
+  });
+}
+
+function cleanCertificate(name: string) {
+  void Backend.cleanCertificate(name).then((result) => {
+    if (result.status === 200) {
+      setTimeout(() => loadCertificates(), DEBOUNCE);
+    }
+  });
+}
+
 watch(filterStates, () => {
   loadCertificates();
 });
 
 onMounted(() => {
+  loadMeta();
   loadCertificates();
 });
 </script>
@@ -157,6 +206,27 @@ onMounted(() => {
                 {{ col.value }}
                 <q-tooltip>{{ col.value }}</q-tooltip>
               </div>
+            </div>
+            <div v-else-if="col.name == 'actions'" class="row no-wrap items-center q-gutter-xs">
+              <div v-if="props.row.state === 'requested'">
+                <q-btn dense color="positive" icon="check_circle" @click="signCertificate(props.row.name)">
+                  <q-tooltip>
+                    Sign
+                  </q-tooltip>
+                </q-btn>
+              </div>
+              <div v-if="props.row.state === 'signed'">
+                <q-btn dense color="primary" icon="cancel" @click="revokeCertificate(props.row.name)">
+                  <q-tooltip>
+                    Revoke
+                  </q-tooltip>
+                </q-btn>
+              </div>
+              <q-btn dense color="negative" icon="remove_circle" @click="cleanCertificate(props.row.name)">
+                <q-tooltip>
+                  Clean
+                </q-tooltip>
+              </q-btn>
             </div>
             <div v-else>
               {{ col.value }}

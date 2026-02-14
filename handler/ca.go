@@ -23,6 +23,9 @@ func NewCaHandler(config *config.Config) *CaHandler {
 
 func (h *CaHandler) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("status", h.QueryCertificateStatuses)
+	group.POST("status/:name/sign", h.SignCertificate)
+	group.POST("status/:name/revoke", h.RevokeCertificate)
+	group.DELETE("status/:name", h.CleanCertificate)
 }
 
 func (h *CaHandler) QueryCertificateStatuses(c *gin.Context) {
@@ -73,4 +76,46 @@ func (h *CaHandler) QueryCertificateStatuses(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse(response))
+}
+
+func (h *CaHandler) SignCertificate(c *gin.Context) {
+	name := c.Param("name")
+	caClient := puppetca.NewClient(h.config)
+
+	err := caClient.SignCertificate(name)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse(nil))
+}
+
+func (h *CaHandler) RevokeCertificate(c *gin.Context) {
+	name := c.Param("name")
+	caClient := puppetca.NewClient(h.config)
+
+	err := caClient.RevokeCertificate(name)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse(nil))
+}
+
+func (h *CaHandler) CleanCertificate(c *gin.Context) {
+	name := c.Param("name")
+	caClient := puppetca.NewClient(h.config)
+
+	err := caClient.CleanCertificate(name)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse(nil))
 }
