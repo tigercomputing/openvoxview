@@ -38,14 +38,15 @@ type Config struct {
 	Views           []model.View     `mapstructure:"views"`
 	UnreportedHours uint64           `mapstructure:"unreported_hours"`
 	PuppetCA        struct {
-		Host      string `mapstructure:"host"`
-		Port      uint64 `mapstructure:"port"`
-		TLS       bool   `mapstructure:"tls"`
-		TLSIgnore bool   `mapstructure:"tls_ignore"`
-		TLS_CA    string `mapstructure:"tls_ca"`
-		TLS_KEY   string `mapstructure:"tls_key"`
-		TLS_CERT  string `mapstructure:"tls_cert"`
-		ReadOnly  bool   `mapstructure:"readonly"`
+		Host            string `mapstructure:"host"`
+		Port            uint64 `mapstructure:"port"`
+		TLS             bool   `mapstructure:"tls"`
+		TLSIgnore       bool   `mapstructure:"tls_ignore"`
+		TLS_CA          string `mapstructure:"tls_ca"`
+		TLS_KEY         string `mapstructure:"tls_key"`
+		TLS_CERT        string `mapstructure:"tls_cert"`
+		ReadOnly        bool   `mapstructure:"readonly"`
+		DeactivateNodes bool   `mapstructure:"deactivate_nodes"`
 	} `mapstructure:"puppetca"`
 }
 
@@ -76,6 +77,7 @@ func GetConfig() (*Config, error) {
 	viper.SetDefault("puppetca.tls", true)
 	viper.SetDefault("puppetca.tls_ignore", false)
 	viper.SetDefault("puppetca.readonly", true)
+	viper.SetDefault("puppetca.deactivate_nodes", false)
 
 	viper.AutomaticEnv()
 
@@ -98,6 +100,7 @@ func GetConfig() (*Config, error) {
 	viper.BindEnv("puppetca.tls_key", "PUPPETCA_TLS_KEY")
 	viper.BindEnv("puppetca.tls_cert", "PUPPETCA_TLS_CERT")
 	viper.BindEnv("puppetca.readonly", "PUPPETCA_READONLY")
+	viper.BindEnv("puppetca.deactivate_nodes", "PUPPETCA_DEACTIVATE_NODES")
 
 	viper.ReadInConfig()
 

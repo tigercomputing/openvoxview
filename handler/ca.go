@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"slices"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/sebastianrakel/openvoxview/config"
 	"github.com/sebastianrakel/openvoxview/model"
 	"github.com/sebastianrakel/openvoxview/puppetca"
+	"github.com/sebastianrakel/openvoxview/puppetdb"
 )
 
 type CaHandler struct {
@@ -103,6 +105,18 @@ func (h *CaHandler) RevokeCertificate(c *gin.Context) {
 		return
 	}
 
+	if h.config.PuppetCA.DeactivateNodes {
+		pdb := puppetdb.NewClient()
+		resp, err := pdb.DeactivateNode(name)
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+			return
+		} else {
+			log.Printf("Deactivated node %s with command UUID: %s", name, resp.Uuid)
+		}
+	}
+
 	c.JSON(http.StatusOK, NewSuccessResponse(nil))
 }
 
@@ -115,6 +129,18 @@ func (h *CaHandler) CleanCertificate(c *gin.Context) {
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 		return
+	}
+
+	if h.config.PuppetCA.DeactivateNodes {
+		pdb := puppetdb.NewClient()
+		resp, err := pdb.DeactivateNode(name)
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+			return
+		} else {
+			log.Printf("Deactivated node %s with command UUID: %s", name, resp.Uuid)
+		}
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse(nil))
