@@ -7,6 +7,7 @@ export interface ErrorResponse {
 }
 
 export interface ApiMeta {
+  CaEnabled: boolean
   UnreportedHours: number
 }
 
