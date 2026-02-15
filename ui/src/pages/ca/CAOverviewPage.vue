@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { QTableColumn, QTableProps } from 'quasar';
+import { copyToClipboard, Notify, type QTableColumn, type QTableProps } from 'quasar';
 import { CertificateState, type CertificateStatus, CertificateStatusResponse } from 'src/puppet/models/certificate-status';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -140,6 +140,24 @@ function cleanCertificate(name: string) {
   });
 }
 
+function copy(text: string) {
+  copyToClipboard(text)
+    .then(() => {
+      Notify.create({
+        message: 'Copied',
+        color: 'positive',
+        position: 'top'
+      })
+    })
+    .catch(() => {
+      Notify.create({
+        message: 'Copy failed',
+        color: 'negative',
+        position: 'top'
+      })
+    })
+}
+
 watch(filterStates, () => {
   loadCertificates();
 });
@@ -153,7 +171,14 @@ onMounted(() => {
 <style scoped>
 .col-fingerprint {
   font-family: monospace;
+  font-size: 90%;
   max-width: 15em;
+}
+</style>
+<style>
+.tt-ca-fpr {
+  font-family: monospace;
+  font-size: 100%;
 }
 </style>
 
@@ -203,8 +228,9 @@ onMounted(() => {
             </div>
             <div v-else-if="col.name == 'fingerprint'">
               <div class="ellipsis col-fingerprint">
+                <q-btn icon="content_copy" flat dense size="sm" @click="copy(col.value)" />
                 {{ col.value }}
-                <q-tooltip>{{ col.value }}</q-tooltip>
+                <q-tooltip class="bg-dark text-white tt-ca-fpr">{{ col.value }}</q-tooltip>
               </div>
             </div>
             <div v-else-if="col.name == 'actions'" class="row no-wrap items-center q-gutter-xs">
