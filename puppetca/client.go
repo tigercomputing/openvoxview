@@ -16,11 +16,15 @@ import (
 )
 
 type client struct {
-	config *config.Config
+	config    *config.Config
+	transport *http.Transport
 }
 
 func NewClient(config *config.Config) *client {
-	return &client{config: config}
+	return &client{
+		config:    config,
+		transport: nil,
+	}
 }
 
 func (c *client) call(httpMethod string, endpoint string, payload any, query url.Values, responseData any) (*http.Response, int, error) {
@@ -42,39 +46,41 @@ func (c *client) call(httpMethod string, endpoint string, payload any, query url
 
 	fmt.Printf("HTTP: %#v: %#v\n", httpMethod, uri)
 
-	var tlsConfig *tls.Config
+	if c.transport == nil {
+		var tlsConfig *tls.Config
 
-	if c.config.PuppetCA.TLS {
-		tlsConfig = &tls.Config{
-			InsecureSkipVerify: c.config.PuppetCA.TLSIgnore,
-		}
-
-		if c.config.PuppetCA.TLS_CA != "" {
-			caCert, err := os.ReadFile(c.config.PuppetCA.TLS_CA)
-			if err != nil {
-				return nil, 0, err
-			}
-			caCertPool := x509.NewCertPool()
-			caCertPool.AppendCertsFromPEM(caCert)
-			tlsConfig.RootCAs = caCertPool
-		}
-
-		if c.config.PuppetCA.TLS_KEY != "" {
-			cer, err := tls.LoadX509KeyPair(c.config.PuppetCA.TLS_CERT, c.config.PuppetCA.TLS_KEY)
-			if err != nil {
-				return nil, 0, err
+		if c.config.PuppetCA.TLS {
+			tlsConfig = &tls.Config{
+				InsecureSkipVerify: c.config.PuppetCA.TLSIgnore,
 			}
 
-			tlsConfig.Certificates = []tls.Certificate{cer}
-		}
-	}
+			if c.config.PuppetCA.TLS_CA != "" {
+				caCert, err := os.ReadFile(c.config.PuppetCA.TLS_CA)
+				if err != nil {
+					return nil, 0, err
+				}
+				caCertPool := x509.NewCertPool()
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsConfig.RootCAs = caCertPool
+			}
 
-	tr := &http.Transport{
-		TLSClientConfig: tlsConfig,
+			if c.config.PuppetCA.TLS_KEY != "" {
+				cer, err := tls.LoadX509KeyPair(c.config.PuppetCA.TLS_CERT, c.config.PuppetCA.TLS_KEY)
+				if err != nil {
+					return nil, 0, err
+				}
+
+				tlsConfig.Certificates = []tls.Certificate{cer}
+			}
+		}
+
+		c.transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
 	}
 
 	httpClient := &http.Client{
-		Transport: tr,
+		Transport: c.transport,
 	}
 
 	req, err := http.NewRequest(httpMethod, uri, bytes.NewBuffer(data))
