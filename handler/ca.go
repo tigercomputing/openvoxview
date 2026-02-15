@@ -95,9 +95,12 @@ func (h *CaHandler) SignCertificate(c *gin.Context) {
 	name := c.Param("name")
 	caClient := puppetca.NewClient(h.config)
 
+	log.Printf("[AUDIT] CA Signing: %s", name)
+
 	err := caClient.SignCertificate(name)
 
 	if err != nil {
+		log.Printf("Error signing certificate: %s", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 		return
 	}
@@ -109,23 +112,20 @@ func (h *CaHandler) RevokeCertificate(c *gin.Context) {
 	name := c.Param("name")
 	caClient := puppetca.NewClient(h.config)
 
+	log.Printf("[AUDIT] CA Revoking: %s", name)
+
 	err := caClient.RevokeCertificate(name)
 
 	if err != nil {
+		log.Printf("Error revoking certificate: %s", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 		return
 	}
 
-	if h.config.PuppetCA.DeactivateNodes {
-		pdb := puppetdb.NewClient()
-		resp, err := pdb.DeactivateNode(name)
-
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
-			return
-		} else {
-			log.Printf("Deactivated node %s with command UUID: %s", name, resp.Uuid)
-		}
+	err = h.deactivateNode(name)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse(nil))
@@ -135,24 +135,40 @@ func (h *CaHandler) CleanCertificate(c *gin.Context) {
 	name := c.Param("name")
 	caClient := puppetca.NewClient(h.config)
 
+	log.Printf("[AUDIT] CA Cleaning: %s", name)
+
 	err := caClient.CleanCertificate(name)
 
+	if err != nil {
+		log.Printf("Error cleaning certificate: %s", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
+	}
+
+	err = h.deactivateNode(name)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 		return
 	}
 
-	if h.config.PuppetCA.DeactivateNodes {
-		pdb := puppetdb.NewClient()
-		resp, err := pdb.DeactivateNode(name)
+	c.JSON(http.StatusOK, NewSuccessResponse(nil))
+}
 
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
-			return
-		} else {
-			log.Printf("Deactivated node %s with command UUID: %s", name, resp.Uuid)
-		}
+func (h *CaHandler) deactivateNode(certname string) error {
+	if !h.config.PuppetCA.DeactivateNodes {
+		return nil
 	}
 
-	c.JSON(http.StatusOK, NewSuccessResponse(nil))
+	log.Printf("[AUDIT] Deactivating node: %s", certname)
+
+	pdb := puppetdb.NewClient()
+	resp, err := pdb.DeactivateNode(certname)
+
+	if err != nil {
+		log.Printf("Error deactivating node: %s", err)
+	} else {
+		log.Printf("Deactivated node %s with command UUID: %s", certname, resp.Uuid)
+	}
+
+	return err
 }

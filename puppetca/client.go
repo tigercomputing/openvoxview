@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -146,7 +145,6 @@ func (c *client) SignCertificate(name string) error {
 	_, statusCode, err := c.call(http.MethodPut, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), payload, nil, nil)
 
 	if err != nil {
-		log.Printf("Error signing certificate: %s", err)
 		return err
 	}
 
@@ -156,7 +154,6 @@ func (c *client) SignCertificate(name string) error {
 	default:
 	}
 
-	log.Printf("Unexpected status code while signing certificate: %d", statusCode)
 	return fmt.Errorf("unexpected status code: %d", statusCode)
 }
 
@@ -170,7 +167,6 @@ func (c *client) RevokeCertificate(name string) error {
 	_, statusCode, err := c.call(http.MethodPut, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), payload, nil, nil)
 
 	if err != nil {
-		log.Printf("Error revoking certificate: %s", err)
 		return err
 	}
 
@@ -180,7 +176,6 @@ func (c *client) RevokeCertificate(name string) error {
 	default:
 	}
 
-	log.Printf("Unexpected status code while revoking certificate: %d", statusCode)
 	return fmt.Errorf("unexpected status code: %d", statusCode)
 }
 
@@ -189,12 +184,10 @@ func (c *client) CleanCertificate(name string) error {
 	status, err := c.GetCertificate(name)
 
 	if err != nil {
-		log.Printf("Error fetching certificate status: %s", err)
 		return err
 	}
 
 	if status == nil {
-		log.Printf("Certificate %s not found, cannot clean", name)
 		return fmt.Errorf("certificate %s not found", name)
 	}
 
@@ -216,12 +209,10 @@ func (c *client) CleanCertificate(name string) error {
 		_, statusCode, err = c.call(http.MethodDelete, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), nil, nil, nil)
 
 	default:
-		log.Printf("Certificate %s is in state %s, cannot clean", name, status.State)
 		return fmt.Errorf("certificate %s is in state %s, cannot clean", name, status.State)
 	}
 
 	if err != nil {
-		log.Printf("Error cleaning certificate: %s", err)
 		return err
 	}
 
@@ -231,6 +222,5 @@ func (c *client) CleanCertificate(name string) error {
 	default:
 	}
 
-	log.Printf("Unexpected status code while cleaning certificate: %d", statusCode)
 	return fmt.Errorf("unexpected status code: %d", statusCode)
 }
