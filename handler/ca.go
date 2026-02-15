@@ -14,12 +14,14 @@ import (
 )
 
 type CaHandler struct {
-	config *config.Config
+	config   *config.Config
+	caClient *puppetca.Client
 }
 
 func NewCaHandler(config *config.Config) *CaHandler {
 	return &CaHandler{
-		config: config,
+		config:   config,
+		caClient: puppetca.NewClient(config),
 	}
 }
 
@@ -49,12 +51,11 @@ func (h *CaHandler) QueryCertificateStatuses(c *gin.Context) {
 		}
 	}
 
-	caClient := puppetca.NewClient(h.config)
 	resultCerts := make([]model.CertificateStatus, 0)
 
 	if query.States != nil {
 		for _, state := range *query.States {
-			certs, err := caClient.GetCertificates(&state)
+			certs, err := h.caClient.GetCertificates(&state)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 				return
@@ -62,7 +63,7 @@ func (h *CaHandler) QueryCertificateStatuses(c *gin.Context) {
 			resultCerts = append(resultCerts, certs...)
 		}
 	} else {
-		certs, err := caClient.GetCertificates(nil)
+		certs, err := h.caClient.GetCertificates(nil)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 			return
@@ -93,11 +94,10 @@ func (h *CaHandler) QueryCertificateStatuses(c *gin.Context) {
 
 func (h *CaHandler) SignCertificate(c *gin.Context) {
 	name := c.Param("name")
-	caClient := puppetca.NewClient(h.config)
 
 	log.Printf("[AUDIT] CA Signing: %s", name)
 
-	err := caClient.SignCertificate(name)
+	err := h.caClient.SignCertificate(name)
 
 	if err != nil {
 		log.Printf("Error signing certificate: %s", err)
@@ -110,11 +110,10 @@ func (h *CaHandler) SignCertificate(c *gin.Context) {
 
 func (h *CaHandler) RevokeCertificate(c *gin.Context) {
 	name := c.Param("name")
-	caClient := puppetca.NewClient(h.config)
 
 	log.Printf("[AUDIT] CA Revoking: %s", name)
 
-	err := caClient.RevokeCertificate(name)
+	err := h.caClient.RevokeCertificate(name)
 
 	if err != nil {
 		log.Printf("Error revoking certificate: %s", err)
@@ -133,11 +132,10 @@ func (h *CaHandler) RevokeCertificate(c *gin.Context) {
 
 func (h *CaHandler) CleanCertificate(c *gin.Context) {
 	name := c.Param("name")
-	caClient := puppetca.NewClient(h.config)
 
 	log.Printf("[AUDIT] CA Cleaning: %s", name)
 
-	err := caClient.CleanCertificate(name)
+	err := h.caClient.CleanCertificate(name)
 
 	if err != nil {
 		log.Printf("Error cleaning certificate: %s", err)

@@ -15,19 +15,19 @@ import (
 	"github.com/sebastianrakel/openvoxview/model"
 )
 
-type client struct {
+type Client struct {
 	config    *config.Config
 	transport *http.Transport
 }
 
-func NewClient(config *config.Config) *client {
-	return &client{
+func NewClient(config *config.Config) *Client {
+	return &Client{
 		config:    config,
 		transport: nil,
 	}
 }
 
-func (c *client) call(httpMethod string, endpoint string, payload any, query url.Values, responseData any) (*http.Response, int, error) {
+func (c *Client) call(httpMethod string, endpoint string, payload any, query url.Values, responseData any) (*http.Response, int, error) {
 	uri := fmt.Sprintf("%s/%s", c.config.GetPuppetCAAddress(), endpoint)
 	if query != nil {
 		uri = fmt.Sprintf("%s?%s", uri, query.Encode())
@@ -113,7 +113,7 @@ func (c *client) call(httpMethod string, endpoint string, payload any, query url
 	return resp, resp.StatusCode, nil
 }
 
-func (c *client) GetCertificates(state *model.CertificateState) ([]model.CertificateStatus, error) {
+func (c *Client) GetCertificates(state *model.CertificateState) ([]model.CertificateStatus, error) {
 	var resp []model.CertificateStatus
 
 	query := url.Values{}
@@ -127,7 +127,7 @@ func (c *client) GetCertificates(state *model.CertificateState) ([]model.Certifi
 	return resp, err
 }
 
-func (c *client) GetCertificate(name string) (*model.CertificateStatus, error) {
+func (c *Client) GetCertificate(name string) (*model.CertificateStatus, error) {
 	var resp model.CertificateStatus
 
 	_, statusCode, err := c.call(http.MethodGet, fmt.Sprintf("puppet-ca/v1/certificate_status/%s", name), nil, nil, &resp)
@@ -141,7 +141,7 @@ func (c *client) GetCertificate(name string) (*model.CertificateStatus, error) {
 	return nil, err
 }
 
-func (c *client) SignCertificate(name string) error {
+func (c *Client) SignCertificate(name string) error {
 	payload := struct {
 		DesiredState string `json:"desired_state"`
 	}{
@@ -163,7 +163,7 @@ func (c *client) SignCertificate(name string) error {
 	return fmt.Errorf("unexpected status code: %d", statusCode)
 }
 
-func (c *client) RevokeCertificate(name string) error {
+func (c *Client) RevokeCertificate(name string) error {
 	payload := struct {
 		DesiredState string `json:"desired_state"`
 	}{
@@ -185,7 +185,7 @@ func (c *client) RevokeCertificate(name string) error {
 	return fmt.Errorf("unexpected status code: %d", statusCode)
 }
 
-func (c *client) CleanCertificate(name string) error {
+func (c *Client) CleanCertificate(name string) error {
 	// Determine the current certificate status to decide which endpoint to use
 	status, err := c.GetCertificate(name)
 
